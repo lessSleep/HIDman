@@ -1,4 +1,18 @@
 
+/********************************** (C) COPYRIGHT *******************************
+* File Name          : GPIO.C
+* Author             : WCH
+* Version            : V1.9
+* Date               : 2021/12/15
+* Description        : CH559的GPIO操作，使用时可以简单操作，直接配置
+                       IO配置主要跟一下寄存器的状态有关系
+											 bPn_OC & Pn_DIR & Pn_PU: pin input & output configuration for Pn (n=0/1/2/3)
+											 详细介绍请看CH559.H的 457行
+*********************************************************************************
+* Copyright (c) 2021 Nanjing Qinheng Microelectronics Co., Ltd.
+* Attention: This software (modified or not) and binary are used for 
+* microcontroller manufactured by Nanjing Qinheng Microelectronics.
+********************************************************************************/
 #include "type.h"
 #include "ch559.h"
 #include "system.h"
@@ -6,12 +20,12 @@
 
 /*******************************************************************************
 * Function Name  : CH559GPIODrivCap(UINT8 Port,UINT8 Cap)
-* Description    : �˿�0��1��2��3������������
-* Input          : UINT8 Port�˿�ѡ��(0��1��2��3)
-                   UINT8 Cap��������ѡ��((0)5mA��(1)20mA(ע��:P1����10mA))
+* Description    : 端口0、1、2、3驱动能力设置
+* Input          : UINT8 Port端口选择(0、1、2、3)
+                   UINT8 Cap驱动能力选择((0)5mA、(1)20mA(注意:P1口是10mA))
 * Output         : None
-* Return         : SUCCESS�ɹ�
-                   FAILʧ��
+* Return         : SUCCESS成功
+                   FAIL失败
 *******************************************************************************/
 UINT8 CH559GPIODrivCap(UINT8 Port,UINT8 Cap)
 {
@@ -21,12 +35,13 @@ UINT8 CH559GPIODrivCap(UINT8 Port,UINT8 Cap)
     }
     
     if (Cap == 0)
-    {                                                               //�����������5mA
+    {                                                               //驱动电流最大5mA
+
         PORT_CFG &= ~(bP0_DRV << Port);
     }
     else
     {		
-        PORT_CFG |= (bP0_DRV << Port);                                             //�����������20mA
+        PORT_CFG |= (bP0_DRV << Port);                                             //驱动电流最大20mA
     }
 
     return SUCCESS;
@@ -34,20 +49,20 @@ UINT8 CH559GPIODrivCap(UINT8 Port,UINT8 Cap)
 
 /*******************************************************************************
 * Function Name  : CH559GPIOModeSelt(UINT8 Port,UINT8 Mode,UINT8 PinNum)
-* Description    : �˿�0��1��2��3����ģʽ����
-* Input          : UINT8 Port�˿�ѡ��(0��1��2��3)
-                   UINT8 Cap������ʽѡ��(bPn_OC & Pn_DIR & Pn_PU)
-                   0(000)�������룬��������
-                   1(001)�������룬��������
-                   2(01x)������������ߵ͵�ƽǿ������
-                   3(100)����©�������������֧�����룻
-                   4(110)����©�����������,��ת������ɵ͵���ʱ��������2��ʱ�ӵĸߵ�ƽ
-                   5(101)��׼˫��(��׼51ģʽ)����©�����������
-                   6(111)��׼˫��(��׼51ģʽ)����©���������������ת������ɵ͵���ʱ��������2��ʱ�ӵĸߵ�ƽ
-                   UINT8 PinNum(����ѡ��0-7)
+* Description    : 端口0、1、2、3引脚模式设置
+* Input          : UINT8 Port端口选择(0、1、2、3)
+                   UINT8 Cap驱动方式选择(bPn_OC & Pn_DIR & Pn_PU)
+                   0(000)：仅输入，无上拉；
+                   1(001)：仅输入，带上拉；
+                   2(01x)：推挽输出，高低电平强驱动；
+                   3(100)：开漏输出，无上拉，支持输入；
+                   4(110)：开漏输出，无上拉,当转变输出由低到高时，仅驱动2个时钟的高电平
+                   5(101)：准双向(标准51模式)，开漏输出，带上拉
+                   6(111)：准双向(标准51模式)，开漏输出，带上拉，当转变输出由低到高时，仅驱动2个时钟的高电平
+                   UINT8 PinNum(引脚选择0-7)
 * Output         : None
-* Return         : SUCCESS�ɹ�
-                   FAILʧ��
+* Return         : SUCCESS成功
+                   FAIL失败
 *******************************************************************************/
 UINT8 CH559GPIOModeSelt(UINT8 Port,UINT8 Mode,UINT8 PinNum)
 {
@@ -86,57 +101,43 @@ UINT8 CH559GPIOModeSelt(UINT8 Port,UINT8 Mode,UINT8 PinNum)
     
     switch (Mode)
     {
-    case 0:                              //�����룬������
-    	PORT_CFG &= ~(bP0_OC << Port);
-    	Pn_DIR &= ~(1<<PinNum);
-    	Pn_PU &= ~(1<<PinNum);
-    	
-    	break;
-    	
-    case 1:                              //�����룬������
-    	PORT_CFG &= ~(bP0_OC << Port);
-    	Pn_DIR &= ~(1<<PinNum);
-    	Pn_PU |= 1<<PinNum;
-    	
-    	break;
-    	
-    case 2:                              //����������ߵ͵�ƽǿ����
-    	PORT_CFG &= ~(bP0_OC << Port);
-    	Pn_DIR |= (1<<PinNum);
-    	
-    	break;
-    	
-    case 3:                              //��©�������������֧������
-    	PORT_CFG |= (bP0_OC << Port);
-    	Pn_DIR &= ~(1<<PinNum);
-    	Pn_PU &= ~(1<<PinNum);
-    	
-    	break;
-    	
-    case 4:                              //��©�����������,��ת������ɵ͵���ʱ��������2��ʱ�ӵĸߵ�ƽ
-    	PORT_CFG |= (bP0_OC << Port);
-    	Pn_DIR |= 1<<PinNum;
-    	Pn_PU &= ~(1<<PinNum);
-    	
-    	break;
-    	
-    case 5:                              //��׼˫��(��׼51ģʽ)����©�����������
-    	PORT_CFG |= (bP0_OC << Port);
-    	Pn_DIR &= ~(1<<PinNum);
-    	Pn_PU |= 1<<PinNum;
-    	
-    	break;
-    	
-    case 6:                              //׼˫��(��׼51ģʽ)����©���������������ת������ɵ͵���ʱ��������2��ʱ�ӵĸߵ�ƽ
-    	PORT_CFG |= (bP0_OC << Port);
-    	Pn_DIR |= 1<<PinNum;
-    	Pn_PU |= 1<<PinNum;
-    	
-    	break;
-    	
-    default:
-    	break;
-    }
+    	case 0:                                                                //仅输入，无上拉
+    		PORT_CFG &= ~(bP0_OC << Port);
+    		Pn_DIR &= ~(1<<PinNum);
+    		Pn_PU &= ~(1<<PinNum);
+    		break;
+    	case 1:                                                                //仅输入，带上拉
+    		PORT_CFG &= ~(bP0_OC << Port);
+    		Pn_DIR &= ~(1<<PinNum);
+    		Pn_PU |= 1<<PinNum;
+    		break;
+    	case 2:                                                                //推挽输出，高低电平强驱动
+    		PORT_CFG &= ~(bP0_OC << Port);
+    		Pn_DIR |= (1<<PinNum);
+    		break;
+    	case 3:                                                                //开漏输出，无上拉，支持输入
+    		PORT_CFG |= (bP0_OC << Port);
+    		Pn_DIR &= ~(1<<PinNum);
+    		Pn_PU &= ~(1<<PinNum);
+    		break;
+    	case 4:                                                                //开漏输出，无上拉,当转变输出由低到高时，仅驱动2个时钟的高电平
+    		PORT_CFG |= (bP0_OC << Port);
+    		Pn_DIR |= 1<<PinNum;
+    		Pn_PU &= ~(1<<PinNum);
+    		break;
+    	case 5:                                                                //弱准双向(标准51模式)，开漏输出，带上拉
+    		PORT_CFG |= (bP0_OC << Port);
+    		Pn_DIR &= ~(1<<PinNum);
+    		Pn_PU |= 1<<PinNum;
+    		break;
+    	case 6:                                                                //准双向(标准51模式)，开漏输出，带上拉，当转变输出由低到高时，仅驱动2个时钟的高电平
+    		PORT_CFG |= (bP0_OC << Port);
+    		Pn_DIR |= 1<<PinNum;
+    		Pn_PU |= 1<<PinNum;
+    		break;
+    	default:
+    		break;
+	}
 
     switch (Port)
     {
@@ -170,31 +171,31 @@ UINT8 CH559GPIOModeSelt(UINT8 Port,UINT8 Mode,UINT8 PinNum)
 
 /*******************************************************************************
 * Function Name  : CH559P4Mode()
-* Description    : CH559��P4�˿ڳ�ʼ����P4Ĭ���������
+* Description    : CH559的P4端口初始化，P4默认是输入口
 * Input          : None
 * Output         : None
 * Return         : None
 *******************************************************************************/
 void CH559P4Mode( )
 {
-	//P4_DIR |= 0xff; 														   //��1����Ϊ���
+	//P4_DIR |= 0xff; 														   //置1设置为输出
 	P4_DIR |= (1 << 2) | (1 << 3) | (1 << 6) | (1 << 7);
-	//P4_PU |= 0xff;															   //����p4���ڲ�����
+	//P4_PU |= 0xff;															   //启动p4口内部上拉
     P4_PU |= (1 << 2) | (1 << 3) | (1 << 6) | (1 << 7);
-	P4_CFG |= bP4_DRV;														   //��λΪ0��P4����������5mA,Ϊ1ʱΪ20mA
+	P4_CFG |= bP4_DRV;														   //该位为0则P4口驱动能力5mA,为1时为20mA
 }
 
 
 /*******************************************************************************
 * Function Name  : CH559GPIOInterruptInit()
-* Description    : CH559GPIO�жϳ�ʼ��������������P5.5\P1.4\P0.3\P5.7\P4.1\RXD0����ͬ��
+* Description    : CH559GPIO中断初始化，其他引脚如P5.5\P1.4\P0.3\P5.7\P4.1\RXD0设置同理
 * Input          : None
 * Output         : None
 * Return         : None
 *******************************************************************************/
 void CH559GPIOInterruptInit()
 {													   
-	GPIO_IE &= ~bIE_IO_EDGE;												   //�жϷ�ʽѡ�񣬸�λΪ0���ʾIO�ڵ�ƽ�жϣ���λΪ1���ʾIO�ڱ����ж�
-	GPIO_IE |= bIE_RXD1_LO; 												   //ʹ��RXD1���ŵ��ж�,���������ж�����ͬ��
+	GPIO_IE &= ~bIE_IO_EDGE;                                                   //中断方式选择，该位为0则表示IO口电平中断，该位为1则表示IO口边沿中断
+	GPIO_IE |= bIE_RXD1_LO;                                                    //使能RXD1引脚的中断,其他引脚中断设置同理
 }
 
